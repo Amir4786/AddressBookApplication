@@ -1,23 +1,23 @@
 import os
 
 folders = [
-    "src",
-    "src/models",
-    "src/schemas",
-    "src/crud",
-    "src/api",
-    "src/core"
+    "./src",
+    "./src/models",
+    "./src/schemas",
+    "./src/crud",
+    "./src/api",
+    "./src/core"
 ]
 
 files = [
-    "src/main.py",
-    "src/database.py",
-    "src/models/address.py",
-    "src/schemas/address.py",
-    "src/crud/address.py",
-    "src/api/address.py",
-    "src/core/logger.py",
-    "src/core/exceptions.py",
+    "./src/main.py",
+    "./src/database.py",
+    "./src/models/address.py",
+    "./src/schemas/address.py",
+    "./src/crud/address.py",
+    "./src/api/address.py",
+    "./src/core/logger.py",
+    "./src/core/exceptions.py",
 ]
 
 # Create folders
