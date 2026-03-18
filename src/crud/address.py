@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from models.address_model import Address
-from schemas.address_schema import AddressCreate
+from models.address import Address
+from schemas.address import AddressCreate
 from core.logger import logger
 from core.exceptions import AddressNotFoundException
 from math import radians, cos, sin, acos
