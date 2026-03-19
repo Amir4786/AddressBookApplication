@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..schemas.address import AddressCreate
 from ..crud import address as crud
+from ..core.exceptions import AddressNotFoundException
 from ..core.logger import api_logger
 
 router = APIRouter(prefix="/addresses", tags=["Addresses"])
@@ -30,6 +31,9 @@ def update(id: int, data: AddressCreate, db: Session = Depends(get_db)):
     except ValidationError as e:
         api_logger.warning(f"Validation error updating address ID {id}: {str(e)}")
         raise HTTPException(status_code=422, detail=f"Validation error: {str(e)}")
+    except AddressNotFoundException:
+        # Let the global exception handler return a consistent 404
+        raise
     except Exception as e:
         api_logger.error(f"Failed to update address ID {id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to update address")
@@ -50,6 +54,8 @@ def read_one(id: int, db: Session = Depends(get_db)):
     try:
         address = crud.get_address(db, id)
         return address
+    except AddressNotFoundException:
+        raise
     except Exception as e:
         api_logger.error(f"Failed to fetch address ID {id}: {str(e)}")
         raise
@@ -60,6 +66,8 @@ def delete(id: int, db: Session = Depends(get_db)):
     try:
         address = crud.delete_address(db, id)
         return {"message": f"Address {id} deleted"}
+    except AddressNotFoundException:
+        raise
     except Exception as e:
         api_logger.error(f"Failed to delete address ID {id}: {str(e)}")
         raise

@@ -215,6 +215,49 @@ uvicorn src.main:app --reload --port 8001
 4. Test thoroughly
 5. Submit a pull request
 
-## License
+## Testing
 
-This project is open source. Feel free to use it for your applications!
+The project includes comprehensive API tests using pytest.
+
+### Running Tests
+
+1. **Run all tests (recommended)**
+   ```bash
+   python run_tests.py
+   ```
+
+2. **Run pytest directly**
+   ```bash
+   python -m pytest -q
+   ```
+
+3. **Run a specific test**
+   ```bash
+   python run_tests.py -k test_create_address_success
+   ```
+
+4. **Run with coverage report**
+   ```bash
+   pip install pytest-cov
+   python run_tests.py --cov=src --cov-report=html
+   ```
+
+### Test Coverage
+
+The test suite covers:
+- ✅ All API endpoints (GET, POST, PUT, DELETE)
+- ✅ Input validation and error handling
+- ✅ Database operations
+- ✅ Geographic calculations
+- ✅ Edge cases and error scenarios
+- ✅ Integration tests
+
+### Test Structure
+
+```
+tests/
+├── __init__.py
+├── conftest.py          # Shared fixtures
+├── test_api.py          # API endpoint tests
+└── run_tests.py         # Test runner script
+```
