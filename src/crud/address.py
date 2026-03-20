@@ -25,7 +25,7 @@ def create_address(db: Session, data: AddressCreate):
     crud_logger.info(f"Creating address: {data.name} - {data.street}, {data.city}, {data.country}")
     try:
         data_dict = data.dict()
-        if data_dict.get('latitude') is None or data_dict.get('longitude') is None:
+        if not data_dict.get('latitude') or not data_dict.get('longitude'):
             coords = _geocode(data)
             if not coords:
                 raise ValueError("Could not geocode address data conflicts with existing records")
@@ -60,7 +60,7 @@ def update_address(db: Session, id: int, data: AddressCreate):
             raise AddressNotFoundException(id)
             
         data_dict = data.dict()
-        if data_dict.get('latitude') is None or data_dict.get('longitude') is None:
+        if not data_dict.get('latitude') or not data_dict.get('longitude'):
             coords = _geocode(data)
             if not coords:
                 raise ValueError("Could not geocode address data conflicts with existing records")
