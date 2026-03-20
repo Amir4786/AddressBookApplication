@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..schemas.address import AddressCreate
+from ..schemas.address import AddressCreate, RouteRequest
 from ..crud import address as crud
 from ..core.exceptions import AddressNotFoundException
 from ..core.logger import api_logger
@@ -96,3 +96,15 @@ def nearby(lat: float, lon: float, distance_km: float, db: Session = Depends(get
     except Exception as e:
         api_logger.error(f"Failed to find nearby addresses: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to find nearby addresses")
+
+
+@router.post("/route/")
+def route_order(data: RouteRequest, db: Session = Depends(get_db)):
+    try:
+        route = crud.get_route_order(db, data.start_id, data.destination_ids)
+        return route
+    except AddressNotFoundException:
+        raise
+    except Exception as e:
+        api_logger.error(f"Failed to calculate route: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to calculate route")

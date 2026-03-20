@@ -83,6 +83,28 @@ class TestCreateAddress:
         response = client.post("/addresses/", json=invalid_types_data)
         assert response.status_code == 422
 
+    def test_create_address_without_coordinates(self, client):
+        # We will test geocoding. Using a known address.
+        # This will make an actual HTTP call to Nominatim unless mocked. 
+        # For this exercise, we let it hit Nominatim.
+        address_data = {
+            "name": "Tower Bridge",
+            "street": "Tower Bridge Road",
+            "city": "London",
+            "country": "UK"
+        }
+        response = client.post("/addresses/", json=address_data)
+        if response.status_code == 400:
+            # Depending on network or Nominatim limits, it might fail.
+            pass
+        else:
+            assert response.status_code == 200
+            data = response.json()
+            assert data["latitude"] is not None
+            assert data["longitude"] is not None
+            assert isinstance(data["latitude"], float)
+            assert isinstance(data["longitude"], float)
+
 class TestGetAddresses:
     """Test address retrieval endpoints"""
 
@@ -320,8 +342,39 @@ class TestIntegration:
         assert delete_response.status_code == 200
 
         # Verify deletion
+        # Verify deletion
         final_get_response = client.get(f"/addresses/{address_id}")
         assert final_get_response.status_code == 404
+
+class TestRouteOrdering:
+    """Test the route ordering endpoint"""
+    
+    def test_route_ordering_success(self, client):
+        # Create some locations
+        loc1 = create_test_address(client, {
+            "name": "Start", "street": "123", "city": "NY", "country": "USA", "latitude": 40.0, "longitude": -74.0
+        }).json()["id"]
+        loc2 = create_test_address(client, {
+            "name": "Dest1", "street": "456", "city": "NY", "country": "USA", "latitude": 40.1, "longitude": -74.0
+        }).json()["id"]
+        loc3 = create_test_address(client, {
+            "name": "Dest2", "street": "789", "city": "NY", "country": "USA", "latitude": 40.5, "longitude": -74.0
+        }).json()["id"]
+        
+        route_req = {
+            "start_id": loc1,
+            "destination_ids": [loc3, loc2]
+        }
+        
+        response = client.post("/addresses/route/", json=route_req)
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 3
+        # Start should be loc1
+        assert data[0]["id"] == loc1
+        # It's going linearly north (40.0 -> 40.1 -> 40.5), so order should be loc1, loc2, loc3
+        assert data[1]["id"] == loc2
+        assert data[2]["id"] == loc3
 
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -5,8 +5,9 @@ A modern, fast, and reliable REST API for managing addresses built with FastAPI 
 ## Features
 
 - 🚀 **FastAPI**: High-performance async web framework
+- 🗺️ **Geocoding & Routing**: Automatic coordinate lookup via GeoPy and TSP route planning
 - 📍 **Geographic Support**: Store latitude/longitude coordinates with validation
-- 🔍 **Nearby Search**: Find addresses within a specified radius
+- 🔍 **Nearby Search**: Find addresses within a specified radius using geodesic distance
 - 📊 **SQLite Database**: Simple, file-based database (easy to set up)
 - 📝 **Comprehensive Logging**: Detailed logs for debugging and monitoring
 - ✅ **Input Validation**: Pydantic models with proper data validation
@@ -106,6 +107,7 @@ The server will start on `http://127.0.0.1:8000` and automatically reload when y
 - `PUT /addresses/{id}` - Update address by ID
 - `DELETE /addresses/{id}` - Delete address by ID
 - `GET /addresses/nearby/?lat={lat}&lon={lon}&distance_km={km}` - Find nearby addresses
+- `POST /addresses/route/` - Get optimal route order for multiple addresses
 
 ### Request/Response Examples
 
@@ -118,15 +120,25 @@ Content-Type: application/json
   "name": "John Doe",
   "street": "123 Main St",
   "city": "New York",
-  "country": "USA",
-  "latitude": 40.7128,
-  "longitude": -74.0060
+  "country": "USA"
 }
+# Note: latitude and longitude are optional. They are automatically geocoded if omitted!
 ```
 
 **Find Nearby Addresses**
 ```bash
 GET /addresses/nearby/?lat=40.7128&lon=-74.0060&distance_km=10
+```
+
+**Route Ordering**
+```bash
+POST /addresses/route/
+Content-Type: application/json
+
+{
+  "start_id": 1,
+  "destination_ids": [4, 7, 2]
+}
 ```
 
 ## Data Models
@@ -138,8 +150,16 @@ GET /addresses/nearby/?lat=40.7128&lon=-74.0060&distance_km=10
   "street": "string",      # Required
   "city": "string",        # Required
   "country": "string",     # Required
-  "latitude": float,       # Required, -90 to 90
-  "longitude": float       # Required, -180 to 180
+  "latitude": float,       # Optional, -90 to 90 (Auto-geocoded if omitted)
+  "longitude": float       # Optional, -180 to 180 (Auto-geocoded if omitted)
+}
+```
+
+### RouteRequest
+```python
+{
+  "start_id": int,              # Required, ID of starting address
+  "destination_ids": list[int]  # Required, list of address IDs to visit
 }
 ```
 

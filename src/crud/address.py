@@ -5,12 +5,33 @@ from ..schemas.address import AddressCreate
 from ..core.logger import crud_logger
 from ..core.exceptions import AddressNotFoundException
 from math import radians, cos, sin, acos
+from geopy.geocoders import Nominatim
+from geopy.distance import geodesic
+
+geolocator = Nominatim(user_agent="address-book-app/1.0")
+
+def _geocode(address_data: AddressCreate) -> tuple[float, float] | None:
+    query = f"{address_data.street}, {address_data.city}, {address_data.country}"
+    try:
+        location = geolocator.geocode(query, timeout=5)
+        if location:
+            return location.latitude, location.longitude
+    except Exception as e:
+        crud_logger.warning(f"Geocoding failed for {query}: {e}")
+    return None
 
 
 def create_address(db: Session, data: AddressCreate):
     crud_logger.info(f"Creating address: {data.name} - {data.street}, {data.city}, {data.country}")
     try:
-        address = Address(**data.dict())
+        data_dict = data.dict()
+        if data_dict.get('latitude') is None or data_dict.get('longitude') is None:
+            coords = _geocode(data)
+            if not coords:
+                raise ValueError("Could not geocode address data conflicts with existing records")
+            data_dict['latitude'], data_dict['longitude'] = coords
+            
+        address = Address(**data_dict)
         db.add(address)
         db.commit()
         db.refresh(address)
@@ -37,7 +58,15 @@ def update_address(db: Session, id: int, data: AddressCreate):
         if not address:
             crud_logger.warning(f"Address ID {id} not found for update")
             raise AddressNotFoundException(id)
-        for key, value in data.dict().items():
+            
+        data_dict = data.dict()
+        if data_dict.get('latitude') is None or data_dict.get('longitude') is None:
+            coords = _geocode(data)
+            if not coords:
+                raise ValueError("Could not geocode address data conflicts with existing records")
+            data_dict['latitude'], data_dict['longitude'] = coords
+            
+        for key, value in data_dict.items():
             setattr(address, key, value)
         db.commit()
         db.refresh(address)
@@ -118,15 +147,11 @@ def get_nearby(db: Session, lat: float, lon: float, distance_km: float):
 
         for addr in addresses:
             try:
-                distance = 6371 * acos(
-                    cos(radians(lat)) * cos(radians(addr.latitude)) *
-                    cos(radians(addr.longitude) - radians(lon)) +
-                    sin(radians(lat)) * sin(radians(addr.latitude))
-                )
+                distance = geodesic((lat, lon), (addr.latitude, addr.longitude)).km
 
                 if distance <= distance_km:
                     result.append({**addr.__dict__, "distance": distance})
-            except (ValueError, TypeError, ZeroDivisionError) as e:
+            except (ValueError, TypeError) as e:
                 crud_logger.warning(f"Error calculating distance for address ID {addr.id}: {e}")
                 continue
             except Exception as e:
@@ -140,4 +165,36 @@ def get_nearby(db: Session, lat: float, lon: float, distance_km: float):
         raise
     except Exception as e:
         crud_logger.error(f"Unexpected error finding nearby addresses: {e}")
+        raise
+
+
+def get_route_order(db: Session, start_id: int, destination_ids: list[int]):
+    try:
+        start_addr = get_address(db, start_id)
+        dests = [get_address(db, d_id) for d_id in destination_ids]
+
+        route = [start_addr]
+        current_loc = (start_addr.latitude, start_addr.longitude)
+        
+        unvisited = dests.copy()
+        
+        while unvisited:
+            closest = None
+            min_dist = float('inf')
+            
+            for dest in unvisited:
+                dist = geodesic(current_loc, (dest.latitude, dest.longitude)).km
+                if dist < min_dist:
+                    min_dist = dist
+                    closest = dest
+                    
+            route.append(closest)
+            current_loc = (closest.latitude, closest.longitude)
+            unvisited.remove(closest)
+            
+        return route
+    except AddressNotFoundException:
+        raise
+    except Exception as e:
+        crud_logger.error(f"Error ordering route: {e}")
         raise
